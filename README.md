@@ -6,7 +6,7 @@ should be identical. I retrieve the configuration from each router and save it i
 I can check if the files are identical using the MD5 for each of the files.
 
 ```
-python /home/stevebj/PycharmProjects/FileCompareCheck/main.py 
+python main.py 
 4221d002ceb5d3c9e9137e495ceaa647 : file1.txt
 4221d002ceb5d3c9e9137e495ceaa647 : file2.txt
 4221d002ceb5d3c9e9137e495ceaa647 : file3.txt
