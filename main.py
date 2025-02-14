@@ -25,12 +25,18 @@ def main():
         file_hash = md5(test_file)
         print(f"{file_hash} : {test_file}")
         file_hash_list.append(file_hash)
-        file_hash_dict[file_hash] = test_file
+        file_hash_dict[test_file] = file_hash
 
     file_hash_set = set(file_hash_list)
     print(f"There are {len(file_hash_set)} unique MD5 values")
     print(f"The most frequent hash is {most_frequent(file_hash_list)}")
-    
+
+    for key, value in file_hash_dict.items():
+        if value != most_frequent(file_hash_list):
+            print(key)
+
+    # print(file_hash_dict)
+
 
 if __name__ == "__main__":
     main()
