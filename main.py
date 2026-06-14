@@ -1,41 +1,72 @@
-import hashlib
+import argparse
 import glob
-from collections import Counter
+import hashlib
+from collections import defaultdict
 
 
-def most_frequent(input_list):
-    occurrence_count = Counter(input_list)
-    return occurrence_count.most_common(1)[0][0]
-
-def md5(filename):
-    """Compute the md5 for a file."""
-    hash_md5 = hashlib.md5()
+def file_hash(filename, algorithm="md5"):
+    """Compute the hash digest for a file, reading it in chunks."""
+    hasher = hashlib.new(algorithm)
     with open(filename, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def group_by_hash(filenames, algorithm="md5"):
+    """Return a dict mapping each hash digest to the list of files with it."""
+    groups = defaultdict(list)
+    for filename in filenames:
+        groups[file_hash(filename, algorithm)].append(filename)
+    return groups
+
 
 def main():
-    test_files = glob.glob('*.txt')
-    test_files.sort()
+    parser = argparse.ArgumentParser(
+        description="Compare files by hash to find which are identical and which differ."
+    )
+    parser.add_argument(
+        "files",
+        nargs="*",
+        default=None,
+        help="Files to compare (default: *.txt in the current directory).",
+    )
+    # Exclude SHAKE algorithms: their hexdigest() requires an explicit length.
+    algorithms = sorted(a for a in hashlib.algorithms_guaranteed if not a.startswith("shake"))
+    parser.add_argument(
+        "-a",
+        "--algorithm",
+        default="md5",
+        choices=algorithms,
+        help="Hash algorithm to use (default: md5).",
+    )
+    args = parser.parse_args()
 
-    file_hash_list = []
-    file_hash_dict = {}
-    for test_file in test_files:
-        file_hash = md5(test_file)
-        print(f"{file_hash} : {test_file}")
-        file_hash_list.append(file_hash)
-        file_hash_dict[test_file] = file_hash
+    files = sorted(args.files) if args.files else sorted(glob.glob("*.txt"))
+    if not files:
+        parser.error("No files to compare.")
 
-    file_hash_set = set(file_hash_list)
-    print(f"There are {len(file_hash_set)} unique MD5 values")
-    print(f"The most frequent hash is {most_frequent(file_hash_list)}")
+    try:
+        groups = group_by_hash(files, args.algorithm)
+    except OSError as e:
+        parser.error(f"Could not read {e.filename}: {e.strerror}")
 
-    for key, value in file_hash_dict.items():
-        if value != most_frequent(file_hash_list):
-            print(key)
+    for digest in sorted(groups, key=lambda d: (-len(groups[d]), groups[d][0])):
+        for filename in sorted(groups[digest]):
+            print(f"{digest} : {filename}")
 
-    # print(file_hash_dict)
+    plural = "value" if len(groups) == 1 else "values"
+    print(f"\nThere are {len(groups)} unique {args.algorithm} {plural} across {len(files)} files")
+
+    # The largest group is treated as the "expected" content; everything else differs.
+    largest = max(groups, key=lambda d: len(groups[d]))
+    outliers = [f for d, fs in groups.items() if d != largest for f in fs]
+    if outliers:
+        print("Files that differ from the majority:")
+        for filename in sorted(outliers):
+            print(f"  {filename}")
+    else:
+        print("All files are identical.")
 
 
 if __name__ == "__main__":
