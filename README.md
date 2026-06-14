@@ -51,6 +51,13 @@ Files with matching hashes (file1, file2, file3) are identical. File4 has a diff
 
 > **Note:** MD5 is fine for spotting accidental differences but is not collision-resistant. Use `-a sha256` if you need protection against deliberately crafted files.
 
+## Testing
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
 ## Requirements
 
 - Python 3.x
